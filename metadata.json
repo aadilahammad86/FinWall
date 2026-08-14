@@ -1,0 +1,6 @@
+{
+  "name": "Material Expressive",
+  "description": "A Material 3 Expressive Android application with floating circular navigation, animated page transitions, and dynamic Monet color controls.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

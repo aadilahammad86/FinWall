@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Floating Circular Dock Shape -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M30,54 C30,40.7 40.7,30 54,30 C67.3,30 78,40.7 78,54 C78,67.3 67.3,78 54,78 C40.7,78 30,67.3 30,54 Z" />
+    <!-- Center Expressive Star/Sparkle -->
+    <path
+        android:fillColor="#6750A4"
+        android:pathData="M54,38 L57.5,49.5 L69,53 L57.5,56.5 L54,68 L50.5,56.5 L39,53 L50.5,49.5 Z" />
+</vector>
