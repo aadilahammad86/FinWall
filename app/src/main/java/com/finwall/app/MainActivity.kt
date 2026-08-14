@@ -1,4 +1,4 @@
-package com.example
+package com.finwall.app
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -26,14 +26,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.navigation.Screen
-import com.example.ui.MainViewModel
-import com.example.ui.components.FloatingCircularNavBar
-import com.example.ui.screens.ActivityScreen
-import com.example.ui.screens.HomeScreen
-import com.example.ui.screens.SettingsScreen
-import com.example.ui.screens.WorkspaceScreen
-import com.example.ui.theme.ExpressiveTheme
+import com.finwall.app.navigation.Screen
+import com.finwall.app.ui.MainViewModel
+import com.finwall.app.ui.components.FloatingCircularNavBar
+import com.finwall.app.ui.screens.ActivityScreen
+import com.finwall.app.ui.screens.HomeScreen
+import com.finwall.app.ui.screens.SettingsScreen
+import com.finwall.app.ui.screens.WorkspaceScreen
+import com.finwall.app.ui.theme.ExpressiveTheme
 
 class MainActivity : ComponentActivity() {
   private val viewModel: MainViewModel by viewModels()

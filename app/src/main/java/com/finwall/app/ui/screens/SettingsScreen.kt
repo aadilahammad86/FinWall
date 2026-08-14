@@ -1,4 +1,4 @@
-package com.example.ui.screens
+package com.finwall.app.ui.screens
 
 import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
@@ -55,9 +55,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.ui.MainUiState
-import com.example.ui.theme.MonetSeedColor
-import com.example.ui.theme.ThemeMode
+import com.finwall.app.ui.MainUiState
+import com.finwall.app.ui.theme.MonetSeedColor
+import com.finwall.app.ui.theme.ThemeMode
 
 @Composable
 fun SettingsScreen(

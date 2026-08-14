@@ -1,4 +1,4 @@
-package com.example.ui.components
+package com.finwall.app.ui.components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
@@ -35,7 +35,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.navigation.Screen
+import com.finwall.app.navigation.Screen
 
 @Composable
 fun FloatingCircularNavBar(

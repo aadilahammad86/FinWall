@@ -1,9 +1,9 @@
-package com.example.ui
+package com.finwall.app.ui
 
 import androidx.lifecycle.ViewModel
-import com.example.navigation.Screen
-import com.example.ui.theme.MonetSeedColor
-import com.example.ui.theme.ThemeMode
+import com.finwall.app.navigation.Screen
+import com.finwall.app.ui.theme.MonetSeedColor
+import com.finwall.app.ui.theme.ThemeMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

@@ -1,4 +1,4 @@
-package com.example.ui.screens
+package com.finwall.app.ui.screens
 
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
