@@ -1,5 +1,6 @@
 package com.finwall.app.ui.screens
 
+import com.finwall.app.ui.components.AddTransactionBottomSheet
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -23,6 +24,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.CompareArrows
+import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -32,13 +35,11 @@ import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.DirectionsSubway
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Flight
-import androidx.compose.material.icons.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -46,7 +47,9 @@ import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -64,10 +67,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.sp
 
 /**
@@ -98,118 +103,146 @@ data class TransactionDateGroup(
  * Implements category filter pills, date dropdown, view toggle, shadowless OutlinedCards,
  * avatar badges, amount indicators, and floating action button.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkspaceScreen(
     innerPadding: PaddingValues
 ) {
     var selectedCategoryIndex by remember { mutableIntStateOf(0) }
     var isGridView by remember { mutableStateOf(false) }
+    var showAddTransactionSheet by remember { mutableStateOf(false) }
 
     val categories = listOf("All", "Expense", "Income", "Lent", "Debt")
 
-    val transactionGroups = listOf(
-        TransactionDateGroup(
-            dateLabel = "Today",
-            items = listOf(
-                TransactionItem(
-                    title = "Lunch",
-                    category = "Food",
-                    paymentMethod = "Cash",
-                    time = "10:15 AM",
-                    amount = "- AED 25.00",
-                    type = TransactionType.EXPENSE,
-                    icon = Icons.Default.Restaurant
+    var transactionGroups by remember {
+        mutableStateOf(
+            listOf(
+                TransactionDateGroup(
+                    dateLabel = "Today",
+                    items = listOf(
+                        TransactionItem(
+                            title = "Lunch",
+                            category = "Food",
+                            paymentMethod = "Cash",
+                            time = "10:15 AM",
+                            amount = "- AED 25.00",
+                            type = TransactionType.EXPENSE,
+                            icon = Icons.Default.Restaurant
+                        ),
+                        TransactionItem(
+                            title = "Rent",
+                            category = "Home",
+                            paymentMethod = "Bank",
+                            time = "9:00 AM",
+                            amount = "- AED 500.00",
+                            type = TransactionType.EXPENSE,
+                            icon = Icons.Default.Home
+                        ),
+                        TransactionItem(
+                            title = "Salary",
+                            category = "Salary",
+                            paymentMethod = "Bank",
+                            time = "8:30 AM",
+                            amount = "+ AED 3,200.00",
+                            type = TransactionType.INCOME,
+                            icon = Icons.Default.Work
+                        )
+                    )
                 ),
-                TransactionItem(
-                    title = "Rent",
-                    category = "Home",
-                    paymentMethod = "Bank",
-                    time = "9:00 AM",
-                    amount = "- AED 500.00",
-                    type = TransactionType.EXPENSE,
-                    icon = Icons.Default.Home
+                TransactionDateGroup(
+                    dateLabel = "Yesterday",
+                    items = listOf(
+                        TransactionItem(
+                            title = "Groceries",
+                            category = "Food",
+                            paymentMethod = "Cash",
+                            time = "Yesterday, 6:45 PM",
+                            amount = "- AED 65.00",
+                            type = TransactionType.EXPENSE,
+                            icon = Icons.Default.ShoppingCart
+                        ),
+                        TransactionItem(
+                            title = "Metro Card Recharge",
+                            category = "Travel",
+                            paymentMethod = "Bank",
+                            time = "Yesterday, 8:10 AM",
+                            amount = "- AED 20.00",
+                            type = TransactionType.EXPENSE,
+                            icon = Icons.Default.DirectionsSubway
+                        )
+                    )
                 ),
-                TransactionItem(
-                    title = "Salary",
-                    category = "Salary",
-                    paymentMethod = "Bank",
-                    time = "8:30 AM",
-                    amount = "+ AED 3,200.00",
-                    type = TransactionType.INCOME,
-                    icon = Icons.Default.Work
-                )
-            )
-        ),
-        TransactionDateGroup(
-            dateLabel = "Yesterday",
-            items = listOf(
-                TransactionItem(
-                    title = "Groceries",
-                    category = "Food",
-                    paymentMethod = "Cash",
-                    time = "Yesterday, 6:45 PM",
-                    amount = "- AED 65.00",
-                    type = TransactionType.EXPENSE,
-                    icon = Icons.Default.ShoppingCart
+                TransactionDateGroup(
+                    dateLabel = "Aug 9, 2026",
+                    items = listOf(
+                        TransactionItem(
+                            title = "Trip to Dubai",
+                            category = "Travel",
+                            paymentMethod = "Cash",
+                            time = "Aug 9, 6:20 PM",
+                            amount = "- AED 120.00",
+                            type = TransactionType.EXPENSE,
+                            icon = Icons.Default.Flight
+                        ),
+                        TransactionItem(
+                            title = "Lent to Ahmed",
+                            category = "Lending",
+                            paymentMethod = "Cash",
+                            time = "Aug 9, 2:30 PM",
+                            amount = "- AED 200.00",
+                            type = TransactionType.LENT,
+                            icon = Icons.Default.Person
+                        ),
+                        TransactionItem(
+                            title = "Freelance Payment",
+                            category = "Freelance",
+                            paymentMethod = "Bank",
+                            time = "Aug 9, 11:00 AM",
+                            amount = "+ AED 750.00",
+                            type = TransactionType.INCOME,
+                            icon = Icons.Default.CardGiftcard
+                        )
+                    )
                 ),
-                TransactionItem(
-                    title = "Metro Card Recharge",
-                    category = "Travel",
-                    paymentMethod = "Bank",
-                    time = "Yesterday, 8:10 AM",
-                    amount = "- AED 20.00",
-                    type = TransactionType.EXPENSE,
-                    icon = Icons.Default.DirectionsSubway
-                )
-            )
-        ),
-        TransactionDateGroup(
-            dateLabel = "Aug 9, 2026",
-            items = listOf(
-                TransactionItem(
-                    title = "Trip to Dubai",
-                    category = "Travel",
-                    paymentMethod = "Cash",
-                    time = "Aug 9, 6:20 PM",
-                    amount = "- AED 120.00",
-                    type = TransactionType.EXPENSE,
-                    icon = Icons.Default.Flight
-                ),
-                TransactionItem(
-                    title = "Lent to Ahmed",
-                    category = "Lending",
-                    paymentMethod = "Cash",
-                    time = "Aug 9, 2:30 PM",
-                    amount = "- AED 200.00",
-                    type = TransactionType.LENT,
-                    icon = Icons.Default.Person
-                ),
-                TransactionItem(
-                    title = "Freelance Payment",
-                    category = "Freelance",
-                    paymentMethod = "Bank",
-                    time = "Aug 9, 11:00 AM",
-                    amount = "+ AED 750.00",
-                    type = TransactionType.INCOME,
-                    icon = Icons.Default.CardGiftcard
-                )
-            )
-        ),
-        TransactionDateGroup(
-            dateLabel = "Aug 8, 2026",
-            items = listOf(
-                TransactionItem(
-                    title = "Movie Tickets",
-                    category = "Entertainment",
-                    paymentMethod = "Cash",
-                    time = "Aug 8, 8:15 PM",
-                    amount = "- AED 45.00",
-                    type = TransactionType.EXPENSE,
-                    icon = Icons.Default.Movie
+                TransactionDateGroup(
+                    dateLabel = "Aug 8, 2026",
+                    items = listOf(
+                        TransactionItem(
+                            title = "Movie Tickets",
+                            category = "Entertainment",
+                            paymentMethod = "Cash",
+                            time = "Aug 8, 8:15 PM",
+                            amount = "- AED 45.00",
+                            type = TransactionType.EXPENSE,
+                            icon = Icons.Default.Movie
+                        )
+                    )
                 )
             )
         )
-    )
+    }
+
+    // Filter displayed items by category
+    val filteredGroups = remember(selectedCategoryIndex, transactionGroups) {
+        val targetType = when (selectedCategoryIndex) {
+            1 -> TransactionType.EXPENSE
+            2 -> TransactionType.INCOME
+            3 -> TransactionType.LENT
+            4 -> TransactionType.DEBT
+            else -> null
+        }
+
+        if (targetType == null) {
+            transactionGroups
+        } else {
+            transactionGroups.mapNotNull { group ->
+                val matchingItems = group.items.filter { it.type == targetType }
+                if (matchingItems.isNotEmpty()) {
+                    group.copy(items = matchingItems)
+                } else null
+            }
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -245,7 +278,7 @@ fun WorkspaceScreen(
             }
 
             // 4. Grouped Transactions List Items
-            itemsIndexed(transactionGroups) { _, group ->
+            itemsIndexed(filteredGroups) { _, group ->
                 TransactionDateGroupCard(group = group)
             }
 
@@ -255,20 +288,59 @@ fun WorkspaceScreen(
             }
         }
 
-        // Floating Action Button (FAB) anchored at bottom right
-        FloatingActionButton(
-            onClick = { },
+        // Material 3 Expressive Extended Floating Action Button (FAB)
+        ExtendedFloatingActionButton(
+            onClick = { showAddTransactionSheet = true },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
+            },
+            text = {
+                Text(
+                    text = "Add Transaction",
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+                )
+            },
+            shape = RoundedCornerShape(22.dp),
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            elevation = FloatingActionButtonDefaults.elevation(
+                defaultElevation = 6.dp,
+                pressedElevation = 10.dp
+            ),
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(bottom = 96.dp, end = 20.dp),
-            shape = RoundedCornerShape(20.dp),
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary
-        ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = "Add Transaction",
-                modifier = Modifier.size(26.dp)
+                .padding(bottom = 96.dp, end = 20.dp)
+                .shadow(
+                    elevation = 12.dp,
+                    shape = RoundedCornerShape(22.dp),
+                    spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
+                )
+        )
+
+        // Material 3 Expressive Add Transaction Modal Bottom Sheet
+        if (showAddTransactionSheet) {
+            AddTransactionBottomSheet(
+                onDismiss = { showAddTransactionSheet = false },
+                onSaveTransaction = { newTx ->
+                    // Prepend new transaction to "Today" group
+                    val todayIndex = transactionGroups.indexOfFirst { it.dateLabel == "Today" }
+                    transactionGroups = if (todayIndex != -1) {
+                        transactionGroups.mapIndexed { idx, grp ->
+                            if (idx == todayIndex) grp.copy(items = listOf(newTx) + grp.items)
+                            else grp
+                        }
+                    } else {
+                        listOf(TransactionDateGroup("Today", listOf(newTx))) + transactionGroups
+                    }
+                    showAddTransactionSheet = false
+                }
             )
         }
     }
@@ -368,7 +440,7 @@ private fun CategoryFilterPillRow(
                 else -> Triple(
                     if (isSelected) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
                     if (isSelected) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.tertiary,
-                    Icons.Default.ReceiptLong
+                    Icons.AutoMirrored.Filled.ReceiptLong
                 )
             }
 
@@ -470,7 +542,7 @@ private fun DateAndLayoutControlRow(
                         .padding(8.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.FormatListBulleted,
+                        imageVector = Icons.AutoMirrored.Filled.FormatListBulleted,
                         contentDescription = "List View",
                         tint = if (!isGridView) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(16.dp)
@@ -520,11 +592,7 @@ private fun TransactionDateGroupCard(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(22.dp),
             colors = CardDefaults.outlinedCardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
-            ),
-            border = androidx.compose.foundation.BorderStroke(
-                1.dp,
-                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
             )
         ) {
             Column(modifier = Modifier.padding(vertical = 4.dp)) {
