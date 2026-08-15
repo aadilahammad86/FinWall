@@ -83,7 +83,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.finwall.app.ui.screens.TransactionType
+import com.finwall.app.data.model.CategoryOption
+import com.finwall.app.data.model.TransactionType
 
 val CuratedCustomCategoryIcons = listOf(
     Pair("Dining", Icons.Default.Restaurant),

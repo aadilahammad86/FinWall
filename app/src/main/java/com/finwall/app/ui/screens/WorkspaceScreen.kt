@@ -1,6 +1,5 @@
 package com.finwall.app.ui.screens
 
-import com.finwall.app.ui.components.AddTransactionBottomSheet
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -22,7 +21,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.CompareArrows
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
@@ -31,19 +29,10 @@ import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.CardGiftcard
-import androidx.compose.material.icons.filled.DirectionsSubway
 import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.Flight
 import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Movie
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.CardDefaults
@@ -69,44 +58,33 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.unit.sp
-
-/**
- * Data Model for Transaction Items
- */
-data class TransactionItem(
-    val title: String,
-    val category: String,
-    val paymentMethod: String,
-    val time: String,
-    val amount: String,
-    val type: TransactionType,
-    val icon: ImageVector
-)
-
-enum class TransactionType {
-    EXPENSE, INCOME, LENT, DEBT
-}
-
-data class TransactionDateGroup(
-    val dateLabel: String,
-    val items: List<TransactionItem>
-)
+import com.finwall.app.data.model.CategoryOption
+import com.finwall.app.data.model.TransactionDateGroup
+import com.finwall.app.data.model.TransactionItem
+import com.finwall.app.data.model.TransactionType
+import com.finwall.app.ui.components.AddTransactionBottomSheet
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * Material 3 Expressive Transactions Screen Layout Schema
  *
- * Implements category filter pills, date dropdown, view toggle, shadowless OutlinedCards,
- * avatar badges, amount indicators, and floating action button.
+ * Implements category filter pills, dynamic date dropdown, view mode toggle,
+ * shadowless OutlinedCards, avatar badges, amount indicators, and floating action button.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkspaceScreen(
-    innerPadding: PaddingValues
+    innerPadding: PaddingValues,
+    transactions: List<TransactionItem> = emptyList(),
+    categoriesMap: Map<TransactionType, List<CategoryOption>> = emptyMap(),
+    onAddTransaction: (TransactionItem) -> Unit = {},
+    onAddCustomCategory: ((TransactionType, CategoryOption) -> Unit)? = null
 ) {
     var selectedCategoryIndex by remember { mutableIntStateOf(0) }
     var isGridView by remember { mutableStateOf(false) }
@@ -114,116 +92,8 @@ fun WorkspaceScreen(
 
     val categories = listOf("All", "Expense", "Income", "Lent", "Debt")
 
-    var transactionGroups by remember {
-        mutableStateOf(
-            listOf(
-                TransactionDateGroup(
-                    dateLabel = "Today",
-                    items = listOf(
-                        TransactionItem(
-                            title = "Lunch",
-                            category = "Food",
-                            paymentMethod = "Cash",
-                            time = "10:15 AM",
-                            amount = "- AED 25.00",
-                            type = TransactionType.EXPENSE,
-                            icon = Icons.Default.Restaurant
-                        ),
-                        TransactionItem(
-                            title = "Rent",
-                            category = "Home",
-                            paymentMethod = "Bank",
-                            time = "9:00 AM",
-                            amount = "- AED 500.00",
-                            type = TransactionType.EXPENSE,
-                            icon = Icons.Default.Home
-                        ),
-                        TransactionItem(
-                            title = "Salary",
-                            category = "Salary",
-                            paymentMethod = "Bank",
-                            time = "8:30 AM",
-                            amount = "+ AED 3,200.00",
-                            type = TransactionType.INCOME,
-                            icon = Icons.Default.Work
-                        )
-                    )
-                ),
-                TransactionDateGroup(
-                    dateLabel = "Yesterday",
-                    items = listOf(
-                        TransactionItem(
-                            title = "Groceries",
-                            category = "Food",
-                            paymentMethod = "Cash",
-                            time = "Yesterday, 6:45 PM",
-                            amount = "- AED 65.00",
-                            type = TransactionType.EXPENSE,
-                            icon = Icons.Default.ShoppingCart
-                        ),
-                        TransactionItem(
-                            title = "Metro Card Recharge",
-                            category = "Travel",
-                            paymentMethod = "Bank",
-                            time = "Yesterday, 8:10 AM",
-                            amount = "- AED 20.00",
-                            type = TransactionType.EXPENSE,
-                            icon = Icons.Default.DirectionsSubway
-                        )
-                    )
-                ),
-                TransactionDateGroup(
-                    dateLabel = "Aug 9, 2026",
-                    items = listOf(
-                        TransactionItem(
-                            title = "Trip to Dubai",
-                            category = "Travel",
-                            paymentMethod = "Cash",
-                            time = "Aug 9, 6:20 PM",
-                            amount = "- AED 120.00",
-                            type = TransactionType.EXPENSE,
-                            icon = Icons.Default.Flight
-                        ),
-                        TransactionItem(
-                            title = "Lent to Ahmed",
-                            category = "Lending",
-                            paymentMethod = "Cash",
-                            time = "Aug 9, 2:30 PM",
-                            amount = "- AED 200.00",
-                            type = TransactionType.LENT,
-                            icon = Icons.Default.Person
-                        ),
-                        TransactionItem(
-                            title = "Freelance Payment",
-                            category = "Freelance",
-                            paymentMethod = "Bank",
-                            time = "Aug 9, 11:00 AM",
-                            amount = "+ AED 750.00",
-                            type = TransactionType.INCOME,
-                            icon = Icons.Default.CardGiftcard
-                        )
-                    )
-                ),
-                TransactionDateGroup(
-                    dateLabel = "Aug 8, 2026",
-                    items = listOf(
-                        TransactionItem(
-                            title = "Movie Tickets",
-                            category = "Entertainment",
-                            paymentMethod = "Cash",
-                            time = "Aug 8, 8:15 PM",
-                            amount = "- AED 45.00",
-                            type = TransactionType.EXPENSE,
-                            icon = Icons.Default.Movie
-                        )
-                    )
-                )
-            )
-        )
-    }
-
     // Filter displayed items by category
-    val filteredGroups = remember(selectedCategoryIndex, transactionGroups) {
+    val filteredTransactions = remember(selectedCategoryIndex, transactions) {
         val targetType = when (selectedCategoryIndex) {
             1 -> TransactionType.EXPENSE
             2 -> TransactionType.INCOME
@@ -232,16 +102,15 @@ fun WorkspaceScreen(
             else -> null
         }
 
-        if (targetType == null) {
-            transactionGroups
-        } else {
-            transactionGroups.mapNotNull { group ->
-                val matchingItems = group.items.filter { it.type == targetType }
-                if (matchingItems.isNotEmpty()) {
-                    group.copy(items = matchingItems)
-                } else null
-            }
-        }
+        if (targetType == null) transactions
+        else transactions.filter { it.type == targetType }
+    }
+
+    // Dynamic grouping by formatted date label
+    val transactionGroups = remember(filteredTransactions) {
+        filteredTransactions
+            .groupBy { it.formattedDate }
+            .map { (dateLabel, items) -> TransactionDateGroup(dateLabel, items) }
     }
 
     Box(
@@ -278,8 +147,30 @@ fun WorkspaceScreen(
             }
 
             // 4. Grouped Transactions List Items
-            itemsIndexed(filteredGroups) { _, group ->
-                TransactionDateGroupCard(group = group)
+            if (transactionGroups.isEmpty()) {
+                item {
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerLow,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Box(
+                            modifier = Modifier.padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "No transactions found for ${categories[selectedCategoryIndex]}.\nTap 'Add Transaction' below to create one.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
+            } else {
+                itemsIndexed(transactionGroups) { _, group ->
+                    TransactionDateGroupCard(group = group)
+                }
             }
 
             // Bottom Spacing for Navigation Bar & FAB
@@ -327,18 +218,11 @@ fun WorkspaceScreen(
         // Material 3 Expressive Add Transaction Modal Bottom Sheet
         if (showAddTransactionSheet) {
             AddTransactionBottomSheet(
+                categoriesMap = categoriesMap,
+                onAddCustomCategory = onAddCustomCategory,
                 onDismiss = { showAddTransactionSheet = false },
                 onSaveTransaction = { newTx ->
-                    // Prepend new transaction to "Today" group
-                    val todayIndex = transactionGroups.indexOfFirst { it.dateLabel == "Today" }
-                    transactionGroups = if (todayIndex != -1) {
-                        transactionGroups.mapIndexed { idx, grp ->
-                            if (idx == todayIndex) grp.copy(items = listOf(newTx) + grp.items)
-                            else grp
-                        }
-                    } else {
-                        listOf(TransactionDateGroup("Today", listOf(newTx))) + transactionGroups
-                    }
+                    onAddTransaction(newTx)
                     showAddTransactionSheet = false
                 }
             )
@@ -485,6 +369,10 @@ private fun DateAndLayoutControlRow(
     isGridView: Boolean,
     onToggleView: () -> Unit
 ) {
+    val monthStr = remember {
+        SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(Date())
+    }
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -495,7 +383,7 @@ private fun DateAndLayoutControlRow(
             onClick = { },
             label = {
                 Text(
-                    text = "August 2026",
+                    text = monthStr,
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
                 )
             },
@@ -696,7 +584,7 @@ private fun TransactionItemRow(
                     )
                 )
                 Text(
-                    text = item.time,
+                    text = item.formattedTime,
                     style = MaterialTheme.typography.labelSmall.copy(
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                         fontSize = 10.sp
@@ -715,7 +603,7 @@ private fun TransactionItemRow(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
-                    text = item.amount,
+                    text = item.displayAmount,
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
                         color = amountColor

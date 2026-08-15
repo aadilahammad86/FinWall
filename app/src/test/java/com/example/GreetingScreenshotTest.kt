@@ -1,8 +1,12 @@
 package com.example
 
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
-import com.example.ui.theme.MyApplicationTheme
+import androidx.compose.ui.unit.dp
+import com.finwall.app.data.model.FinanceSummary
+import com.finwall.app.ui.screens.HomeScreen
+import com.finwall.app.ui.theme.ExpressiveTheme
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
 import com.github.takahirom.roborazzi.captureRoboImage
 import org.junit.Rule
@@ -14,14 +18,21 @@ import org.robolectric.annotation.GraphicsMode
 
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(qualifiers = RobolectricDeviceQualifiers.Pixel8, sdk = [36])
+@Config(qualifiers = RobolectricDeviceQualifiers.Pixel8, sdk = [34])
 class GreetingScreenshotTest {
 
   @get:Rule val composeTestRule = createComposeRule()
 
   @Test
   fun greeting_screenshot() {
-    composeTestRule.setContent { MyApplicationTheme { Greeting("Robolectric") } }
+    composeTestRule.setContent {
+      ExpressiveTheme {
+        HomeScreen(
+          innerPadding = PaddingValues(0.dp),
+          financeSummary = FinanceSummary()
+        )
+      }
+    }
 
     composeTestRule.onRoot().captureRoboImage(filePath = "src/test/screenshots/greeting.png")
   }

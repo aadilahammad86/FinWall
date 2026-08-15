@@ -86,10 +86,22 @@ class MainActivity : ComponentActivity() {
               when (targetScreen) {
                 Screen.Home -> HomeScreen(
                   innerPadding = innerPadding,
+                  financeSummary = uiState.financeSummary,
+                  onNavigateToWorkspace = { viewModel.navigateTo(Screen.Workspace) },
                   onNavigateToSettings = { viewModel.navigateTo(Screen.Settings) }
                 )
-                Screen.Workspace -> WorkspaceScreen(innerPadding = innerPadding)
-                Screen.Activity -> ActivityScreen(innerPadding = innerPadding)
+                Screen.Workspace -> WorkspaceScreen(
+                  innerPadding = innerPadding,
+                  transactions = uiState.transactions,
+                  categoriesMap = uiState.categoriesMap,
+                  onAddTransaction = { viewModel.addTransaction(it) },
+                  onAddCustomCategory = { type, cat -> viewModel.addCustomCategory(type, cat) }
+                )
+                Screen.Activity -> ActivityScreen(
+                  innerPadding = innerPadding,
+                  activityLogs = uiState.activityLogs,
+                  financeSummary = uiState.financeSummary
+                )
                 Screen.Settings -> SettingsScreen(
                   innerPadding = innerPadding,
                   uiState = uiState,

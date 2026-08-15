@@ -14,15 +14,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Pending
+import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Timeline
+import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
@@ -32,13 +34,26 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.finwall.app.data.model.FinanceSummary
+import com.finwall.app.data.model.FinancialActivityLog
+import com.finwall.app.data.model.formatCurrency
+import com.finwall.app.data.model.formatTimestampToTime
 
 @Composable
 fun ActivityScreen(
-    innerPadding: PaddingValues
+    innerPadding: PaddingValues,
+    activityLogs: List<FinancialActivityLog> = emptyList(),
+    financeSummary: FinanceSummary = FinanceSummary()
 ) {
+    val savingsRate = if (financeSummary.totalIncome > 0) {
+        (((financeSummary.totalIncome - financeSummary.totalExpense) / financeSummary.totalIncome) * 100).toInt().coerceIn(0, 100)
+    } else 0
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -46,7 +61,7 @@ fun ActivityScreen(
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Activity Header Card
+        // Activity & Financial Insights Header Card
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -68,7 +83,7 @@ fun ActivityScreen(
                         )
                         .padding(24.dp)
                 ) {
-                    Column {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -89,17 +104,65 @@ fun ActivityScreen(
                             Spacer(modifier = Modifier.width(16.dp))
                             Column {
                                 Text(
-                                    text = "Activity Section",
+                                    text = "Activity & Insights",
                                     style = MaterialTheme.typography.headlineMedium.copy(
                                         fontWeight = FontWeight.Bold
                                     ),
                                     color = MaterialTheme.colorScheme.onTertiaryContainer
                                 )
                                 Text(
-                                    text = "Real-time Events & Expressive Motion",
+                                    text = "Real-time Financial Events & Audit Stream",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f)
                                 )
+                            }
+                        }
+
+                        // Summary Quick Stats Row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Text(
+                                        text = "Savings Rate",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = "$savingsRate%",
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    )
+                                }
+                            }
+
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Text(
+                                        text = "Budget Spent",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = "${(financeSummary.budgetUsagePercentage * 100).toInt()}%",
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (financeSummary.budgetUsagePercentage > 0.9f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary
+                                        )
+                                    )
+                                }
                             }
                         }
                     }
@@ -107,36 +170,54 @@ fun ActivityScreen(
             }
         }
 
-        // Timeline Items
+        // Live Activity & Audit Log Card
         item {
             OutlinedCard(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp)
+                shape = RoundedCornerShape(24.dp)
             ) {
                 Column(
                     modifier = Modifier.padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    TimelineRow(
-                        title = "Floating Circular Navigation Installed",
-                        subtitle = "Active spring morph animations & touch ripples",
-                        statusIcon = Icons.Default.CheckCircle,
-                        isComplete = true
+                    Text(
+                        text = "Event Timeline",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                     )
 
-                    TimelineRow(
-                        title = "Dynamic Monet Palette Integration",
-                        subtitle = "Real-time color scheme interpolation & seed selector",
-                        statusIcon = Icons.Default.AutoAwesome,
-                        isComplete = true
-                    )
+                    if (activityLogs.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "No recent events recorded yet.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    } else {
+                        activityLogs.forEachIndexed { index, log ->
+                            TimelineRow(
+                                title = log.title,
+                                subtitle = "${log.subtitle} • ${formatTimestampToTime(log.timestamp)}",
+                                statusIcon = log.icon,
+                                isHighlighted = log.isHighlighted
+                            )
 
-                    TimelineRow(
-                        title = "Section Content Deployment",
-                        subtitle = "Work in Progress placeholders active",
-                        statusIcon = Icons.Default.Pending,
-                        isComplete = false
-                    )
+                            if (index < activityLogs.size - 1) {
+                                HorizontalDivider(
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -151,8 +232,8 @@ fun ActivityScreen(
 private fun TimelineRow(
     title: String,
     subtitle: String,
-    statusIcon: androidx.compose.ui.graphics.vector.ImageVector,
-    isComplete: Boolean
+    statusIcon: ImageVector,
+    isHighlighted: Boolean
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -160,14 +241,14 @@ private fun TimelineRow(
     ) {
         Surface(
             shape = CircleShape,
-            color = if (isComplete) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-            modifier = Modifier.size(36.dp)
+            color = if (isHighlighted) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+            modifier = Modifier.size(40.dp)
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = statusIcon,
                     contentDescription = null,
-                    tint = if (isComplete) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                    tint = if (isHighlighted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -180,12 +261,12 @@ private fun TimelineRow(
         ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }

@@ -24,13 +24,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Insights
-import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.AssistChip
@@ -58,6 +60,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -65,19 +68,28 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.finwall.app.data.model.FinanceSummary
+import com.finwall.app.data.model.TransactionItem
+import com.finwall.app.data.model.TransactionType
+import com.finwall.app.data.model.formatCurrency
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
- * Refined Material 3 Expressive Home Screen Grid Layout Schema
+ * Material 3 Expressive Home Screen Grid Layout Schema
  *
- * Enforces Monet dynamic theme color schemes, M3 surface tonal hierarchy,
- * left-aligned header layout, unified outer OutlinedCard, and 100% Monet-tinted,
- * shape-clipped ripple indications (NO rectangular ripple overflows).
- * Replaces drop-shadow cards with M3 OutlinedCards while preserving filled inner cards.
+ * Fully dynamic: Displays real-time calculations from FinanceSummary.
+ * Includes Net Balance, Monthly Cashflow, Lending/Liabilities metrics,
+ * dynamic budget usage progress bar, category spend distribution visualizer,
+ * and live recent transactions feed.
  */
 @Composable
 fun HomeScreen(
     innerPadding: PaddingValues,
-    onNavigateToSettings: () -> Unit
+    financeSummary: FinanceSummary,
+    onNavigateToWorkspace: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {}
 ) {
     LazyColumn(
         modifier = Modifier
@@ -89,22 +101,31 @@ fun HomeScreen(
     ) {
         // 1. Left-aligned Top Header Bar
         item {
-            TopHeaderBar()
+            TopHeaderBar(
+                recentCount = financeSummary.recentTransactions.size,
+                onSettingsClick = onNavigateToSettings
+            )
         }
 
-        // 2. Single Big Outer OutlinedCard Container wrapping Hero Stat & 2-Column Metrics
+        // 2. Single Big Outer OutlinedCard Container wrapping Hero Balance & 2-Column Metrics
         item {
-            OuterHeroMetricsCard()
+            OuterHeroMetricsCard(
+                summary = financeSummary,
+                onExploreDetails = onNavigateToWorkspace
+            )
         }
 
         // 3. Analytics Overview Container Slot (M3 OutlinedCard)
         item {
-            OverviewAnalyticsCard()
+            OverviewAnalyticsCard(summary = financeSummary)
         }
 
         // 4. Recent Activity List Section Container Slot (M3 OutlinedCard)
         item {
-            ListSectionCard()
+            ListSectionCard(
+                recentTransactions = financeSummary.recentTransactions,
+                onViewAll = onNavigateToWorkspace
+            )
         }
 
         // Bottom spacing for floating navigation bar
@@ -119,7 +140,14 @@ fun HomeScreen(
  * Left-aligned greeting & workspace chip with top-right notification BadgedBox icon.
  */
 @Composable
-private fun TopHeaderBar() {
+private fun TopHeaderBar(
+    recentCount: Int,
+    onSettingsClick: () -> Unit
+) {
+    val currentMonthStr = remember {
+        SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(Date())
+    }
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -145,12 +173,12 @@ private fun TopHeaderBar() {
                 )
             }
 
-            // Left-Aligned Context AssistChip with Monet ripple
+            // Left-Aligned Context AssistChip
             AssistChip(
                 onClick = { },
                 label = {
                     Text(
-                        text = "Current Workspace",
+                        text = currentMonthStr,
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
                     )
                 },
@@ -183,14 +211,16 @@ private fun TopHeaderBar() {
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             tonalElevation = 2.dp
         ) {
-            IconButton(onClick = { }) {
+            IconButton(onClick = onSettingsClick) {
                 BadgedBox(
                     badge = {
-                        Badge(
-                            containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError
-                        ) {
-                            Text("3", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        if (recentCount > 0) {
+                            Badge(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            ) {
+                                Text(recentCount.toString(), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 ) {
@@ -210,7 +240,10 @@ private fun TopHeaderBar() {
  * Groups Primary Display Stat Hero Area and 2-Column Split Metrics inside one unified OutlinedCard.
  */
 @Composable
-private fun OuterHeroMetricsCard() {
+private fun OuterHeroMetricsCard(
+    summary: FinanceSummary,
+    onExploreDetails: () -> Unit
+) {
     OutlinedCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(28.dp),
@@ -227,20 +260,23 @@ private fun OuterHeroMetricsCard() {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Top Section: Primary Display Stat Hero Area (Filled Container Card)
-            HeroBalanceSection()
+            HeroBalanceSection(summary = summary, onExploreDetails = onExploreDetails)
 
             HorizontalDivider(
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
             )
 
             // Bottom Section: 2-Column Split Metric Grid Row (Filled Inner Cards)
-            SummaryGridRow()
+            SummaryGridRow(summary = summary)
         }
     }
 }
 
 @Composable
-private fun HeroBalanceSection() {
+private fun HeroBalanceSection(
+    summary: FinanceSummary,
+    onExploreDetails: () -> Unit
+) {
     var isHovered by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
         targetValue = if (isHovered) 0.98f else 1.0f,
@@ -278,13 +314,13 @@ private fun HeroBalanceSection() {
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.AutoAwesome,
+                        imageVector = Icons.Default.AccountBalanceWallet,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.size(18.dp)
                     )
                     Text(
-                        text = "Primary Overview Metric",
+                        text = "Total Net Balance",
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.Medium
                         ),
@@ -300,25 +336,26 @@ private fun HeroBalanceSection() {
                 )
             }
 
-            // Primary Stat Slot
+            // Primary Stat Slot: Formatted Real Net Balance
             Text(
-                text = "Primary Display Stat",
+                text = formatCurrency(summary.totalBalance),
                 style = MaterialTheme.typography.displaySmall.copy(
                     fontWeight = FontWeight.Bold
                 ),
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
 
+            // Dynamic Monthly Summary Subtitle
             Text(
-                text = "Grouped inside big outer OutlinedCard container with Monet color theme.",
+                text = "${formatCurrency(summary.totalIncome, TransactionType.INCOME)} in • ${formatCurrency(summary.totalExpense, TransactionType.EXPENSE)} out",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
             )
 
             // Expressive M3 Pill Button with Native Surface onClick
             Row {
                 Surface(
-                    onClick = { },
+                    onClick = onExploreDetails,
                     shape = RoundedCornerShape(20.dp),
                     color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
                     contentColor = MaterialTheme.colorScheme.onSurface
@@ -329,7 +366,7 @@ private fun HeroBalanceSection() {
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Text(
-                            text = "Explore Details",
+                            text = "Explore Transactions",
                             style = MaterialTheme.typography.labelMedium.copy(
                                 fontWeight = FontWeight.Bold
                             )
@@ -347,12 +384,14 @@ private fun HeroBalanceSection() {
 }
 
 @Composable
-private fun SummaryGridRow() {
+private fun SummaryGridRow(
+    summary: FinanceSummary
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Metric Column 1 Card Slot (Filled Container)
+        // Metric Column 1 Card Slot (Cash Flow: Income & Expenses)
         Card(
             modifier = Modifier.weight(1f),
             shape = RoundedCornerShape(20.dp),
@@ -383,7 +422,7 @@ private fun SummaryGridRow() {
                         }
                     }
                     Text(
-                        text = "Metric Column 1",
+                        text = "Monthly Cash Flow",
                         style = MaterialTheme.typography.titleSmall.copy(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -394,23 +433,23 @@ private fun SummaryGridRow() {
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     MetricRowSlot(
-                        label = "Sub Metric A",
-                        value = "Value Slot A",
-                        badgeColor = MaterialTheme.colorScheme.tertiaryContainer,
-                        badgeContentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                        label = "Total Income",
+                        value = formatCurrency(summary.totalIncome, TransactionType.INCOME),
+                        badgeColor = MaterialTheme.colorScheme.primaryContainer,
+                        badgeContentColor = MaterialTheme.colorScheme.primary
                     )
 
                     MetricRowSlot(
-                        label = "Sub Metric B",
-                        value = "Value Slot B",
+                        label = "Total Expenses",
+                        value = formatCurrency(summary.totalExpense, TransactionType.EXPENSE),
                         badgeColor = MaterialTheme.colorScheme.errorContainer,
-                        badgeContentColor = MaterialTheme.colorScheme.onErrorContainer
+                        badgeContentColor = MaterialTheme.colorScheme.error
                     )
                 }
             }
         }
 
-        // Metric Column 2 Card Slot (Filled Container)
+        // Metric Column 2 Card Slot (Lending & Debt)
         Card(
             modifier = Modifier.weight(1f),
             shape = RoundedCornerShape(20.dp),
@@ -441,7 +480,7 @@ private fun SummaryGridRow() {
                         }
                     }
                     Text(
-                        text = "Metric Column 2",
+                        text = "Lending & Debt",
                         style = MaterialTheme.typography.titleSmall.copy(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -452,17 +491,17 @@ private fun SummaryGridRow() {
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     MetricRowSlot(
-                        label = "Sub Metric C",
-                        value = "Value Slot C",
+                        label = "Total Lent",
+                        value = formatCurrency(summary.totalLent, TransactionType.LENT),
                         badgeColor = MaterialTheme.colorScheme.secondaryContainer,
-                        badgeContentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        badgeContentColor = MaterialTheme.colorScheme.secondary
                     )
 
                     MetricRowSlot(
-                        label = "Sub Metric D",
-                        value = "Value Slot D",
-                        badgeColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        badgeContentColor = MaterialTheme.colorScheme.onSurface
+                        label = "Total Debt",
+                        value = formatCurrency(summary.totalDebt, TransactionType.DEBT),
+                        badgeColor = MaterialTheme.colorScheme.tertiaryContainer,
+                        badgeContentColor = MaterialTheme.colorScheme.tertiary
                     )
                 }
             }
@@ -474,8 +513,8 @@ private fun SummaryGridRow() {
 private fun MetricRowSlot(
     label: String,
     value: String,
-    badgeColor: androidx.compose.ui.graphics.Color,
-    badgeContentColor: androidx.compose.ui.graphics.Color
+    badgeColor: Color,
+    badgeContentColor: Color
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -519,12 +558,16 @@ private fun MetricRowSlot(
 
 /**
  * Slot 3: Analytics Overview Container (M3 OutlinedCard - Shadowless)
- * Dedicated horizontal row for pills category switcher preventing single-line vertical text wrapping.
+ * Dynamic Budget Usage Progress Bar & Category Spend Distribution Visualizer.
  */
 @Composable
-private fun OverviewAnalyticsCard() {
+private fun OverviewAnalyticsCard(
+    summary: FinanceSummary
+) {
     var selectedIndex by remember { mutableIntStateOf(0) }
-    val periods = listOf("Period 1", "Period 2", "Period 3")
+    val periods = listOf("This Month", "All Time")
+
+    val budgetUsagePercent = (summary.budgetUsagePercentage * 100).toInt()
 
     OutlinedCard(
         modifier = Modifier.fillMaxWidth(),
@@ -548,7 +591,7 @@ private fun OverviewAnalyticsCard() {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Analytics Overview",
+                    text = "Analytics & Budget Target",
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -556,7 +599,7 @@ private fun OverviewAnalyticsCard() {
                 )
             }
 
-            // Fixed Pills Category Switcher Layout (Dedicated Full-Width Row)
+            // Period Switcher Row
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -576,7 +619,7 @@ private fun OverviewAnalyticsCard() {
                             .clip(tabShape)
                             .background(
                                 if (isSelected) MaterialTheme.colorScheme.primary
-                                else androidx.compose.ui.graphics.Color.Transparent
+                                else Color.Transparent
                             )
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
@@ -600,7 +643,7 @@ private fun OverviewAnalyticsCard() {
                 }
             }
 
-            // Metric Stat & Expressive Progress Indicator
+            // Dynamic Monthly Budget Progress Indicator
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -608,33 +651,33 @@ private fun OverviewAnalyticsCard() {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Capacity Usage Target",
+                        text = "Monthly Budget (${formatCurrency(summary.totalExpense)} / ${formatCurrency(summary.monthlyBudgetLimit)})",
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     )
                     Text(
-                        text = "84%",
+                        text = "$budgetUsagePercent%",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                            color = if (summary.budgetUsagePercentage > 0.9f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                         )
                     )
                 }
 
                 LinearProgressIndicator(
-                    progress = { 0.84f },
+                    progress = { summary.budgetUsagePercentage },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(10.dp)
                         .clip(RoundedCornerShape(5.dp)),
-                    color = MaterialTheme.colorScheme.primary,
+                    color = if (summary.budgetUsagePercentage > 0.9f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                     trackColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
                     strokeCap = StrokeCap.Round
                 )
             }
 
-            // Robust Visual Analytics Grid Area Slot
+            // Dynamic Category Spending Breakdown Visualizer
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -656,7 +699,7 @@ private fun OverviewAnalyticsCard() {
                             modifier = Modifier.size(18.dp)
                         )
                         Text(
-                            text = "Analytics Visualizer Slot",
+                            text = "Category Spending Distribution",
                             style = MaterialTheme.typography.labelMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -672,7 +715,9 @@ private fun OverviewAnalyticsCard() {
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.Bottom
                     ) {
-                        val heights = listOf(0.4f, 0.7f, 0.55f, 0.9f, 0.65f, 0.8f, 0.95f)
+                        val heights = summary.categorySpendProportions.ifEmpty {
+                            listOf(0.4f, 0.7f, 0.55f, 0.9f, 0.65f, 0.8f, 0.95f)
+                        }
                         val colors = listOf(
                             MaterialTheme.colorScheme.primary,
                             MaterialTheme.colorScheme.secondary,
@@ -703,10 +748,13 @@ private fun OverviewAnalyticsCard() {
 
 /**
  * Slot 4: Recent Activity List Container (M3 OutlinedCard - Shadowless)
- * Uses native Surface onClick for pill buttons with Monet-tinted clipped ripples.
+ * Dynamic rendering of recent transactions.
  */
 @Composable
-private fun ListSectionCard() {
+private fun ListSectionCard(
+    recentTransactions: List<TransactionItem>,
+    onViewAll: () -> Unit
+) {
     OutlinedCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -718,14 +766,14 @@ private fun ListSectionCard() {
             modifier = Modifier.padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Header Row with Expressive M3 Pill Button (Native Surface onClick)
+            // Header Row with View All Pill Button
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Recent Activity Items",
+                    text = "Recent Transactions",
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -734,7 +782,7 @@ private fun ListSectionCard() {
 
                 // M3 Expressive Pill Button with Native Surface onClick
                 Surface(
-                    onClick = { },
+                    onClick = onViewAll,
                     shape = RoundedCornerShape(20.dp),
                     color = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -759,33 +807,62 @@ private fun ListSectionCard() {
                 }
             }
 
-            // Standardized M3 Item Rows
-            ItemRowSlot(
-                icon = Icons.Default.Layers,
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                iconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                title = "Structural Item Slot 1",
-                subtitle = "Category • Metadata detail",
-                stat = "Stat Slot 1"
-            )
+            if (recentTransactions.isEmpty()) {
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Box(
+                        modifier = Modifier.padding(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "No recent transactions found.\nTap 'Explore Transactions' to add one.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            } else {
+                recentTransactions.forEachIndexed { idx, item ->
+                    val (containerColor, iconColor) = when (item.type) {
+                        TransactionType.EXPENSE -> Pair(
+                            MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f),
+                            MaterialTheme.colorScheme.error
+                        )
+                        TransactionType.INCOME -> Pair(
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+                            MaterialTheme.colorScheme.primary
+                        )
+                        TransactionType.LENT -> Pair(
+                            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
+                            MaterialTheme.colorScheme.secondary
+                        )
+                        TransactionType.DEBT -> Pair(
+                            MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f),
+                            MaterialTheme.colorScheme.tertiary
+                        )
+                    }
 
-            ItemRowSlot(
-                icon = Icons.Default.GridView,
-                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                iconColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                title = "Structural Item Slot 2",
-                subtitle = "Category • Metadata detail",
-                stat = "Stat Slot 2"
-            )
+                    ItemRowSlot(
+                        icon = item.icon,
+                        containerColor = containerColor,
+                        iconColor = iconColor,
+                        title = item.title,
+                        subtitle = "${item.category} • ${item.paymentMethod}",
+                        stat = item.displayAmount,
+                        statColor = iconColor
+                    )
 
-            ItemRowSlot(
-                icon = Icons.Default.AutoAwesome,
-                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                iconColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                title = "Structural Item Slot 3",
-                subtitle = "Category • Metadata detail",
-                stat = "Stat Slot 3"
-            )
+                    if (idx < recentTransactions.size - 1) {
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -793,11 +870,12 @@ private fun ListSectionCard() {
 @Composable
 private fun ItemRowSlot(
     icon: ImageVector,
-    containerColor: androidx.compose.ui.graphics.Color,
-    iconColor: androidx.compose.ui.graphics.Color,
+    containerColor: Color,
+    iconColor: Color,
     title: String,
     subtitle: String,
-    stat: String
+    stat: String,
+    statColor: Color
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -806,7 +884,8 @@ private fun ItemRowSlot(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            modifier = Modifier.weight(1f)
         ) {
             Surface(
                 shape = CircleShape,
@@ -823,20 +902,24 @@ private fun ItemRowSlot(
                 }
             }
 
-            Column {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
-                    )
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall.copy(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 11.sp
-                    )
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
@@ -851,7 +934,7 @@ private fun ItemRowSlot(
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                 style = MaterialTheme.typography.labelSmall.copy(
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+                    color = statColor
                 )
             )
         }

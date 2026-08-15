@@ -81,18 +81,20 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.finwall.app.ui.screens.TransactionItem
-import com.finwall.app.ui.screens.TransactionType
-
-data class CategoryOption(
-    val name: String,
-    val icon: ImageVector
-)
+import com.finwall.app.data.model.CategoryOption
+import com.finwall.app.data.model.DefaultDebtCategories
+import com.finwall.app.data.model.DefaultExpenseCategories
+import com.finwall.app.data.model.DefaultIncomeCategories
+import com.finwall.app.data.model.DefaultLentCategories
+import com.finwall.app.data.model.TransactionItem
+import com.finwall.app.data.model.TransactionType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddTransactionBottomSheet(
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    categoriesMap: Map<TransactionType, List<CategoryOption>> = emptyMap(),
+    onAddCustomCategory: ((TransactionType, CategoryOption) -> Unit)? = null,
     onDismiss: () -> Unit,
     onSaveTransaction: (TransactionItem) -> Unit
 ) {
@@ -103,59 +105,19 @@ fun AddTransactionBottomSheet(
     var isSavePressed by remember { mutableStateOf(false) }
     var showCategoryPickerSheet by remember { mutableStateOf(false) }
 
-    // Dynamic Category lists per type (supporting user-added custom categories)
-    val defaultExpenseCategories = remember {
-        listOf(
-            CategoryOption("Food & Dining", Icons.Default.Restaurant),
-            CategoryOption("Fast Food", Icons.Default.Fastfood),
-            CategoryOption("Groceries", Icons.Default.ShoppingCart),
-            CategoryOption("Travel & Transport", Icons.Default.DirectionsCar),
-            CategoryOption("Home & Rent", Icons.Default.Home),
-            CategoryOption("Bills & Utilities", Icons.AutoMirrored.Filled.ReceiptLong),
-            CategoryOption("Entertainment", Icons.Default.Movie),
-            CategoryOption("Education", Icons.Default.School)
+    // Dynamic Category lists per type (fallback to defaults if empty)
+    val activeCategoriesMap = remember(categoriesMap) {
+        if (categoriesMap.isNotEmpty()) categoriesMap
+        else mapOf(
+            TransactionType.EXPENSE to DefaultExpenseCategories,
+            TransactionType.INCOME to DefaultIncomeCategories,
+            TransactionType.LENT to DefaultLentCategories,
+            TransactionType.DEBT to DefaultDebtCategories
         )
     }
 
-    val defaultIncomeCategories = remember {
-        listOf(
-            CategoryOption("Salary", Icons.Default.Work),
-            CategoryOption("Investments", Icons.AutoMirrored.Filled.TrendingUp),
-            CategoryOption("Freelance", Icons.Default.Payment),
-            CategoryOption("Bonus & Gifts", Icons.Default.AttachMoney)
-        )
-    }
-
-    val defaultLentCategories = remember {
-        listOf(
-            CategoryOption("Friend Loan", Icons.Default.Person),
-            CategoryOption("Family Support", Icons.Default.Home),
-            CategoryOption("Colleague", Icons.Default.Work),
-            CategoryOption("Other", Icons.Default.Payment)
-        )
-    }
-
-    val defaultDebtCategories = remember {
-        listOf(
-            CategoryOption("Borrowed from Friend", Icons.Default.Person),
-            CategoryOption("Family Loan", Icons.Default.Home),
-            CategoryOption("Bank Loan", Icons.Default.Payment),
-            CategoryOption("Credit Advance", Icons.Default.CreditCard)
-        )
-    }
-
-    // Dynamic user categories map
-    val categoriesMap = remember {
-        mutableStateMapOf(
-            TransactionType.EXPENSE to defaultExpenseCategories,
-            TransactionType.INCOME to defaultIncomeCategories,
-            TransactionType.LENT to defaultLentCategories,
-            TransactionType.DEBT to defaultDebtCategories
-        )
-    }
-
-    val currentCategories = categoriesMap[selectedType] ?: defaultExpenseCategories
-    var selectedCategory by remember(selectedType) { mutableStateOf(currentCategories.first()) }
+    val currentCategories = activeCategoriesMap[selectedType] ?: DefaultExpenseCategories
+    var selectedCategory by remember(selectedType, currentCategories) { mutableStateOf(currentCategories.first()) }
 
     val paymentMethods = listOf(
         Pair("Cash", Icons.Default.LocalAtm),
@@ -316,7 +278,7 @@ fun AddTransactionBottomSheet(
                                 )
                             ) {
                                 selectedType = type
-                                selectedCategory = (categoriesMap[type] ?: defaultExpenseCategories).first()
+                                selectedCategory = (activeCategoriesMap[type] ?: DefaultExpenseCategories).first()
                             }
                             .padding(vertical = 10.dp),
                         contentAlignment = Alignment.Center
@@ -611,20 +573,15 @@ fun AddTransactionBottomSheet(
                     if (isFormValid) {
                         val finalTitle = if (titleText.isNotBlank()) titleText.trim() else selectedCategory.name
                         val rawAmount = amountText.toDoubleOrNull() ?: 0.0
-                        val formattedAmount = when (selectedType) {
-                            TransactionType.EXPENSE -> String.format("- AED %.2f", rawAmount)
-                            TransactionType.INCOME -> String.format("+ AED %.2f", rawAmount)
-                            TransactionType.LENT, TransactionType.DEBT -> String.format("AED %.2f", rawAmount)
-                        }
 
                         val newTransaction = TransactionItem(
                             title = finalTitle,
                             category = selectedCategory.name,
                             paymentMethod = selectedPaymentMethod,
-                            time = "Just now",
-                            amount = formattedAmount,
+                            amount = rawAmount,
                             type = selectedType,
-                            icon = selectedCategory.icon
+                            icon = selectedCategory.icon,
+                            timestamp = System.currentTimeMillis()
                         )
 
                         onSaveTransaction(newTransaction)
@@ -674,8 +631,7 @@ fun AddTransactionBottomSheet(
                     showCategoryPickerSheet = false
                 },
                 onAddCustomCategory = { newCustomCat ->
-                    val updatedList = listOf(newCustomCat) + currentCategories
-                    categoriesMap[selectedType] = updatedList
+                    onAddCustomCategory?.invoke(selectedType, newCustomCat)
                     selectedCategory = newCustomCat
                     showCategoryPickerSheet = false
                 },
