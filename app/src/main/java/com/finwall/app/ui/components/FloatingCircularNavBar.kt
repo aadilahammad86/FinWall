@@ -1,20 +1,27 @@
 package com.finwall.app.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -46,26 +53,28 @@ fun FloatingCircularNavBar(
     Box(
         modifier = modifier
             .navigationBarsPadding()
-            .padding(horizontal = 24.dp, vertical = 16.dp),
+            .padding(horizontal = 20.dp, vertical = 16.dp),
         contentAlignment = Alignment.Center
     ) {
-        // Floating pill surface
+        // Floating pill surface - directly wraps children on each frame for 100% parallel motion
         Surface(
             shape = RoundedCornerShape(32.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.95f),
-            tonalElevation = 8.dp,
-            shadowElevation = 12.dp,
-            modifier = Modifier
-                .shadow(
-                    elevation = 16.dp,
-                    shape = RoundedCornerShape(32.dp),
-                    spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
-                )
+            color = MaterialTheme.colorScheme.surfaceContainerLowest,
+            tonalElevation = 6.dp,
+            shadowElevation = 8.dp,
+            border = BorderStroke(
+                1.dp,
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+            ),
+            modifier = Modifier.shadow(
+                elevation = 12.dp,
+                shape = RoundedCornerShape(32.dp),
+                spotColor = MaterialTheme.colorScheme.scrim.copy(alpha = 0.15f)
+            )
         ) {
             Row(
-                modifier = Modifier
-                    .padding(horizontal = 10.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Screen.items.forEach { screen ->
@@ -89,32 +98,29 @@ private fun FloatingCircularNavItem(
     onClick: () -> Unit
 ) {
     val scale by animateFloatAsState(
-        targetValue = if (isSelected) 1.12f else 1.0f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium
-        ),
+        targetValue = if (isSelected) 1.05f else 1.0f,
+        animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
         label = "nav_scale_${screen.route}"
     )
 
     val containerColor by animateColorAsState(
         targetValue = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
         label = "nav_bg_${screen.route}"
     )
 
     val iconColor by animateColorAsState(
         targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
         label = "nav_icon_${screen.route}"
     )
 
     val interactionSource = remember { MutableInteractionSource() }
 
-    Box(
+    Row(
         modifier = Modifier
             .testTag("nav_item_${screen.route}")
-            .size(width = if (isSelected) 100.dp else 48.dp, height = 48.dp)
+            .height(48.dp)
             .scale(scale)
             .clip(CircleShape)
             .background(containerColor, CircleShape)
@@ -126,24 +132,39 @@ private fun FloatingCircularNavItem(
                     radius = 28.dp
                 ),
                 onClick = onClick
-            ),
-        contentAlignment = Alignment.Center
+            )
+            .padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
     ) {
-        if (isSelected) {
+        Icon(
+            imageVector = if (isSelected) screen.selectedIcon else screen.unselectedIcon,
+            contentDescription = screen.title,
+            tint = iconColor,
+            modifier = Modifier.size(24.dp)
+        )
+
+        // Single unified width driver: AnimatedVisibility expand/shrink
+        AnimatedVisibility(
+            visible = isSelected,
+            enter = expandHorizontally(
+                animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+                expandFrom = Alignment.Start
+            ) + fadeIn(
+                animationSpec = tween(durationMillis = 200, delayMillis = 50, easing = FastOutSlowInEasing)
+            ),
+            exit = shrinkHorizontally(
+                animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+                shrinkTowards = Alignment.Start
+            ) + fadeOut(
+                animationSpec = tween(durationMillis = 120, easing = FastOutSlowInEasing)
+            )
+        ) {
             Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 12.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start
             ) {
-                Icon(
-                    imageVector = screen.selectedIcon,
-                    contentDescription = screen.title,
-                    tint = iconColor,
-                    modifier = Modifier.size(22.dp)
-                )
-                Box(modifier = Modifier.size(6.dp))
+                Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = screen.title,
                     color = iconColor,
@@ -151,16 +172,10 @@ private fun FloatingCircularNavItem(
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp
                     ),
-                    maxLines = 1
+                    maxLines = 1,
+                    softWrap = false
                 )
             }
-        } else {
-            Icon(
-                imageVector = screen.unselectedIcon,
-                contentDescription = screen.title,
-                tint = iconColor,
-                modifier = Modifier.size(24.dp)
-            )
         }
     }
 }

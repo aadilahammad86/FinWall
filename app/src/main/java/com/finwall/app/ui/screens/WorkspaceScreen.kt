@@ -29,13 +29,18 @@ import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
@@ -46,6 +51,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -84,11 +90,15 @@ fun WorkspaceScreen(
     transactions: List<TransactionItem> = emptyList(),
     categoriesMap: Map<TransactionType, List<CategoryOption>> = emptyMap(),
     onAddTransaction: (TransactionItem) -> Unit = {},
+    onUpdateTransaction: (TransactionItem) -> Unit = {},
+    onDeleteTransaction: (String) -> Unit = {},
     onAddCustomCategory: ((TransactionType, CategoryOption) -> Unit)? = null
 ) {
     var selectedCategoryIndex by remember { mutableIntStateOf(0) }
     var isGridView by remember { mutableStateOf(false) }
     var showAddTransactionSheet by remember { mutableStateOf(false) }
+    var editingTransaction by remember { mutableStateOf<TransactionItem?>(null) }
+    var transactionToDelete by remember { mutableStateOf<TransactionItem?>(null) }
 
     val categories = listOf("All", "Expense", "Income", "Lent", "Debt")
 
@@ -151,7 +161,7 @@ fun WorkspaceScreen(
                 item {
                     Surface(
                         shape = RoundedCornerShape(20.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerLow,
+                        color = MaterialTheme.colorScheme.surfaceContainerLowest,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Box(
@@ -169,7 +179,11 @@ fun WorkspaceScreen(
                 }
             } else {
                 itemsIndexed(transactionGroups) { _, group ->
-                    TransactionDateGroupCard(group = group)
+                    TransactionDateGroupCard(
+                        group = group,
+                        onEditClick = { editingTransaction = it },
+                        onDeleteClick = { transactionToDelete = it }
+                    )
                 }
             }
 
@@ -225,6 +239,89 @@ fun WorkspaceScreen(
                     onAddTransaction(newTx)
                     showAddTransactionSheet = false
                 }
+            )
+        }
+
+        // Material 3 Expressive Edit Transaction Modal Bottom Sheet
+        if (editingTransaction != null) {
+            AddTransactionBottomSheet(
+                transactionToEdit = editingTransaction,
+                categoriesMap = categoriesMap,
+                onAddCustomCategory = onAddCustomCategory,
+                onDismiss = { editingTransaction = null },
+                onSaveTransaction = { updatedTx ->
+                    onUpdateTransaction(updatedTx)
+                    editingTransaction = null
+                }
+            )
+        }
+
+        // Material 3 Expressive Delete Confirmation Dialog
+        if (transactionToDelete != null) {
+            val item = transactionToDelete!!
+            AlertDialog(
+                onDismissRequest = { transactionToDelete = null },
+                icon = {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        modifier = Modifier.size(44.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.DeleteOutline,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+                },
+                title = {
+                    Text(
+                        text = "Delete Transaction",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                },
+                text = {
+                    Text(
+                        text = "Are you sure you want to delete '${item.title}' (${item.displayAmount})? This action cannot be undone.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            onDeleteTransaction(item.id)
+                            transactionToDelete = null
+                        }
+                    ) {
+                        Text(
+                            text = "Delete",
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { transactionToDelete = null }) {
+                        Text(
+                            text = "Cancel",
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontWeight = FontWeight.Medium
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
+                shape = RoundedCornerShape(28.dp),
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
             )
         }
     }
@@ -464,7 +561,9 @@ private fun DateAndLayoutControlRow(
  */
 @Composable
 private fun TransactionDateGroupCard(
-    group: TransactionDateGroup
+    group: TransactionDateGroup,
+    onEditClick: (TransactionItem) -> Unit,
+    onDeleteClick: (TransactionItem) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
@@ -480,12 +579,16 @@ private fun TransactionDateGroupCard(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(22.dp),
             colors = CardDefaults.outlinedCardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
             )
         ) {
             Column(modifier = Modifier.padding(vertical = 4.dp)) {
                 group.items.forEachIndexed { index, item ->
-                    TransactionItemRow(item = item)
+                    TransactionItemRow(
+                        item = item,
+                        onEditClick = onEditClick,
+                        onDeleteClick = onDeleteClick
+                    )
                     if (index < group.items.size - 1) {
                         HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 16.dp),
@@ -503,8 +606,12 @@ private fun TransactionDateGroupCard(
  */
 @Composable
 private fun TransactionItemRow(
-    item: TransactionItem
+    item: TransactionItem,
+    onEditClick: (TransactionItem) -> Unit,
+    onDeleteClick: (TransactionItem) -> Unit
 ) {
+    var menuExpanded by remember { mutableStateOf(false) }
+
     val (avatarBg, avatarIconTint, amountColor, typeBg, typeText) = when (item.type) {
         TransactionType.EXPENSE -> Tuples5(
             MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f),
@@ -593,7 +700,7 @@ private fun TransactionItemRow(
             }
         }
 
-        // Trailing Amount, Type Pill Badge, & Overflow Button
+        // Trailing Amount, Type Pill Badge, & Overflow Button with DropdownMenu
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -626,16 +733,71 @@ private fun TransactionItemRow(
                 }
             }
 
-            IconButton(
-                onClick = { },
-                modifier = Modifier.size(32.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = "Options",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                    modifier = Modifier.size(18.dp)
-                )
+            Box {
+                IconButton(
+                    onClick = { menuExpanded = true },
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "Options",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false },
+                    shape = RoundedCornerShape(16.dp),
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+                ) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = "Edit",
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Edit",
+                                modifier = Modifier.size(18.dp)
+                            )
+                        },
+                        onClick = {
+                            menuExpanded = false
+                            onEditClick(item)
+                        }
+                    )
+
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = "Delete",
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.DeleteOutline,
+                                contentDescription = "Delete",
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        },
+                        onClick = {
+                            menuExpanded = false
+                            onDeleteClick(item)
+                        }
+                    )
+                }
             }
         }
     }

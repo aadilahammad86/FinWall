@@ -255,7 +255,7 @@ fun CategoryPickerBottomSheet(
                 Surface(
                     onClick = { showCreateDialog = true },
                     shape = RoundedCornerShape(18.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    color = MaterialTheme.colorScheme.surfaceContainerLowest,
                     border = BorderStroke(
                         1.dp,
                         typeColor.copy(alpha = 0.4f)
@@ -363,7 +363,7 @@ fun CategoryPickerBottomSheet(
                                 shape = chipShape,
                                 colors = CardDefaults.cardColors(
                                     containerColor = if (isSelected) typeContainerColor
-                                    else MaterialTheme.colorScheme.surfaceContainerLow
+                                    else MaterialTheme.colorScheme.surfaceContainerLowest
                                 ),
                                 border = if (isSelected) BorderStroke(1.5.dp, typeColor)
                                 else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))

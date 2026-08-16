@@ -169,6 +169,43 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    fun updateTransaction(transaction: TransactionItem) {
+        _uiState.update { current ->
+            val updatedList = current.transactions.map { if (it.id == transaction.id) transaction else it }
+            val editLog = FinancialActivityLog(
+                title = "Transaction Updated: ${transaction.title}",
+                subtitle = "${transaction.displayAmount} via ${transaction.paymentMethod} • ${transaction.category}",
+                icon = transaction.icon,
+                isHighlighted = false,
+                timestamp = System.currentTimeMillis()
+            )
+            current.copy(
+                transactions = updatedList,
+                activityLogs = listOf(editLog) + current.activityLogs
+            )
+        }
+    }
+
+    fun deleteTransaction(transactionId: String) {
+        _uiState.update { current ->
+            val target = current.transactions.find { it.id == transactionId }
+            val updatedList = current.transactions.filter { it.id != transactionId }
+            val deleteLog = target?.let {
+                FinancialActivityLog(
+                    title = "Transaction Deleted: ${it.title}",
+                    subtitle = "${it.displayAmount} removed",
+                    icon = it.icon,
+                    isHighlighted = false,
+                    timestamp = System.currentTimeMillis()
+                )
+            }
+            current.copy(
+                transactions = updatedList,
+                activityLogs = if (deleteLog != null) listOf(deleteLog) + current.activityLogs else current.activityLogs
+            )
+        }
+    }
+
     fun addCustomCategory(type: TransactionType, category: CategoryOption) {
         _uiState.update { current ->
             val existing = current.categoriesMap[type] ?: emptyList()

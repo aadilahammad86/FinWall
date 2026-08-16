@@ -81,6 +81,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.util.Locale
 import com.finwall.app.data.model.CategoryOption
 import com.finwall.app.data.model.DefaultDebtCategories
 import com.finwall.app.data.model.DefaultExpenseCategories
@@ -93,15 +94,23 @@ import com.finwall.app.data.model.TransactionType
 @Composable
 fun AddTransactionBottomSheet(
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    transactionToEdit: TransactionItem? = null,
     categoriesMap: Map<TransactionType, List<CategoryOption>> = emptyMap(),
     onAddCustomCategory: ((TransactionType, CategoryOption) -> Unit)? = null,
     onDismiss: () -> Unit,
     onSaveTransaction: (TransactionItem) -> Unit
 ) {
-    var selectedType by remember { mutableStateOf(TransactionType.EXPENSE) }
-    var amountText by remember { mutableStateOf("") }
-    var titleText by remember { mutableStateOf("") }
-    var selectedPaymentMethod by remember { mutableStateOf("Cash") }
+    var selectedType by remember(transactionToEdit) { mutableStateOf(transactionToEdit?.type ?: TransactionType.EXPENSE) }
+    var amountText by remember(transactionToEdit) {
+        mutableStateOf(
+            transactionToEdit?.let {
+                if (it.amount == it.amount.toLong().toDouble()) it.amount.toLong().toString()
+                else String.format(Locale.US, "%.2f", it.amount)
+            } ?: ""
+        )
+    }
+    var titleText by remember(transactionToEdit) { mutableStateOf(transactionToEdit?.title ?: "") }
+    var selectedPaymentMethod by remember(transactionToEdit) { mutableStateOf(transactionToEdit?.paymentMethod ?: "Cash") }
     var isSavePressed by remember { mutableStateOf(false) }
     var showCategoryPickerSheet by remember { mutableStateOf(false) }
 
@@ -117,7 +126,15 @@ fun AddTransactionBottomSheet(
     }
 
     val currentCategories = activeCategoriesMap[selectedType] ?: DefaultExpenseCategories
-    var selectedCategory by remember(selectedType, currentCategories) { mutableStateOf(currentCategories.first()) }
+    var selectedCategory by remember(selectedType, currentCategories, transactionToEdit) {
+        mutableStateOf(
+            if (transactionToEdit != null && transactionToEdit.type == selectedType) {
+                currentCategories.find { it.name == transactionToEdit.category } ?: CategoryOption(transactionToEdit.category, transactionToEdit.icon, transactionToEdit.type)
+            } else {
+                currentCategories.first()
+            }
+        )
+    }
 
     val paymentMethods = listOf(
         Pair("Cash", Icons.Default.LocalAtm),
@@ -188,14 +205,14 @@ fun AddTransactionBottomSheet(
             ) {
                 Column {
                     Text(
-                        text = "New Transaction",
+                        text = if (transactionToEdit != null) "Edit Transaction" else "New Transaction",
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontWeight = FontWeight.Bold
                         ),
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Record an income, expense, lent or debt",
+                        text = if (transactionToEdit != null) "Update amount, category, or payment details" else "Record an income, expense, lent or debt",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -393,7 +410,7 @@ fun AddTransactionBottomSheet(
                 Surface(
                     onClick = { showCategoryPickerSheet = true },
                     shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    color = MaterialTheme.colorScheme.surfaceContainerLowest,
                     border = BorderStroke(
                         1.dp,
                         MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
@@ -574,17 +591,30 @@ fun AddTransactionBottomSheet(
                         val finalTitle = if (titleText.isNotBlank()) titleText.trim() else selectedCategory.name
                         val rawAmount = amountText.toDoubleOrNull() ?: 0.0
 
-                        val newTransaction = TransactionItem(
-                            title = finalTitle,
-                            category = selectedCategory.name,
-                            paymentMethod = selectedPaymentMethod,
-                            amount = rawAmount,
-                            type = selectedType,
-                            icon = selectedCategory.icon,
-                            timestamp = System.currentTimeMillis()
-                        )
+                        val finalTransaction = if (transactionToEdit != null) {
+                            TransactionItem(
+                                id = transactionToEdit.id,
+                                title = finalTitle,
+                                category = selectedCategory.name,
+                                paymentMethod = selectedPaymentMethod,
+                                amount = rawAmount,
+                                type = selectedType,
+                                icon = selectedCategory.icon,
+                                timestamp = transactionToEdit.timestamp
+                            )
+                        } else {
+                            TransactionItem(
+                                title = finalTitle,
+                                category = selectedCategory.name,
+                                paymentMethod = selectedPaymentMethod,
+                                amount = rawAmount,
+                                type = selectedType,
+                                icon = selectedCategory.icon,
+                                timestamp = System.currentTimeMillis()
+                            )
+                        }
 
-                        onSaveTransaction(newTransaction)
+                        onSaveTransaction(finalTransaction)
                     }
                 },
                 enabled = isFormValid,
@@ -608,7 +638,7 @@ fun AddTransactionBottomSheet(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Save Transaction",
+                        text = if (transactionToEdit != null) "Update Transaction" else "Save Transaction",
                         style = MaterialTheme.typography.titleSmall.copy(
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp

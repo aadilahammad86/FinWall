@@ -1,13 +1,13 @@
 package com.finwall.app.navigation
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Explore
-import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.AutoAwesome
-import androidx.compose.material.icons.outlined.Explore
-import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.PieChart
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
 
@@ -20,25 +20,25 @@ sealed class Screen(
 ) {
     object Home : Screen(
         route = "home",
-        title = "Explore",
-        selectedIcon = Icons.Filled.Explore,
-        unselectedIcon = Icons.Outlined.Explore,
+        title = "Home",
+        selectedIcon = Icons.Filled.Home,
+        unselectedIcon = Icons.Outlined.Home,
         index = 0
     )
 
     object Workspace : Screen(
-        route = "workspace",
-        title = "Workspace",
-        selectedIcon = Icons.Filled.GridView,
-        unselectedIcon = Icons.Outlined.GridView,
+        route = "transactions",
+        title = "Transactions",
+        selectedIcon = Icons.AutoMirrored.Filled.ReceiptLong,
+        unselectedIcon = Icons.AutoMirrored.Outlined.ReceiptLong,
         index = 1
     )
 
     object Activity : Screen(
-        route = "activity",
-        title = "Activity",
-        selectedIcon = Icons.Filled.AutoAwesome,
-        unselectedIcon = Icons.Outlined.AutoAwesome,
+        route = "budget",
+        title = "Budget",
+        selectedIcon = Icons.Filled.PieChart,
+        unselectedIcon = Icons.Outlined.PieChart,
         index = 2
     )
 

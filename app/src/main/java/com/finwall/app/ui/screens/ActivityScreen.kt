@@ -104,7 +104,7 @@ fun ActivityScreen(
                             Spacer(modifier = Modifier.width(16.dp))
                             Column {
                                 Text(
-                                    text = "Activity & Insights",
+                                    text = "Budget & Insights",
                                     style = MaterialTheme.typography.headlineMedium.copy(
                                         fontWeight = FontWeight.Bold
                                     ),
@@ -174,7 +174,10 @@ fun ActivityScreen(
         item {
             OutlinedCard(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp)
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.outlinedCardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+                )
             ) {
                 Column(
                     modifier = Modifier.padding(20.dp),
