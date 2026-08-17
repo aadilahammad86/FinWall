@@ -2,11 +2,19 @@ package com.finwall.app
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,15 +25,21 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.finwall.app.data.model.BudgetItem
 import com.finwall.app.navigation.Screen
 import com.finwall.app.ui.MainViewModel
 import com.finwall.app.ui.components.FloatingCircularNavBar
 import com.finwall.app.ui.screens.ActivityScreen
+import com.finwall.app.ui.screens.AddBudgetScreen
+import com.finwall.app.ui.screens.BudgetDetailScreen
 import com.finwall.app.ui.screens.HomeScreen
 import com.finwall.app.ui.screens.SettingsScreen
 import com.finwall.app.ui.screens.WorkspaceScreen
@@ -41,6 +55,16 @@ class MainActivity : ComponentActivity() {
     setContent {
       val uiState by viewModel.uiState.collectAsStateWithLifecycle()
       val coroutineScope = rememberCoroutineScope()
+
+      var showAddBudgetScreen by remember { mutableStateOf(false) }
+      var activeBudgetDetail by remember { mutableStateOf<BudgetItem?>(null) }
+      var cachedBudgetDetail by remember { mutableStateOf<BudgetItem?>(null) }
+
+      LaunchedEffect(activeBudgetDetail) {
+        if (activeBudgetDetail != null) {
+          cachedBudgetDetail = activeBudgetDetail
+        }
+      }
 
       ExpressiveTheme(
         themeMode = uiState.themeMode,
@@ -111,7 +135,12 @@ class MainActivity : ComponentActivity() {
                 Screen.Activity -> ActivityScreen(
                   innerPadding = innerPadding,
                   activityLogs = uiState.activityLogs,
-                  financeSummary = uiState.financeSummary
+                  financeSummary = uiState.financeSummary,
+                  budgets = uiState.budgets,
+                  transactions = uiState.transactions,
+                  onAddBudgetClick = { showAddBudgetScreen = true },
+                  onBudgetClick = { activeBudgetDetail = it },
+                  onSetMonthlyBudgetLimit = { viewModel.setMonthlyBudget(it) }
                 )
                 Screen.Settings -> SettingsScreen(
                   innerPadding = innerPadding,
@@ -143,6 +172,102 @@ class MainActivity : ComponentActivity() {
               },
               modifier = Modifier.align(Alignment.BottomCenter)
             )
+
+            // Native Android System Back Gesture Handlers
+            BackHandler(enabled = showAddBudgetScreen) {
+              showAddBudgetScreen = false
+            }
+
+            BackHandler(enabled = activeBudgetDetail != null) {
+              activeBudgetDetail = null
+            }
+
+            // Create New Budget Screen Full-Screen Animated Overlay
+            AnimatedVisibility(
+              visible = showAddBudgetScreen,
+              enter = slideInHorizontally(
+                initialOffsetX = { it },
+                animationSpec = spring(
+                  dampingRatio = Spring.DampingRatioLowBouncy,
+                  stiffness = Spring.StiffnessLow
+                )
+              ) + fadeIn(
+                animationSpec = spring(
+                  dampingRatio = Spring.DampingRatioLowBouncy,
+                  stiffness = Spring.StiffnessLow
+                )
+              ),
+              exit = slideOutHorizontally(
+                targetOffsetX = { it },
+                animationSpec = spring(
+                  dampingRatio = Spring.DampingRatioLowBouncy,
+                  stiffness = Spring.StiffnessLow
+                )
+              ) + fadeOut(
+                animationSpec = spring(
+                  dampingRatio = Spring.DampingRatioLowBouncy,
+                  stiffness = Spring.StiffnessLow
+                )
+              )
+            ) {
+              AddBudgetScreen(
+                categoriesMap = uiState.categoriesMap,
+                onDismiss = { showAddBudgetScreen = false },
+                onSaveBudget = { newBudget ->
+                  viewModel.addBudget(newBudget)
+                },
+                onAddCustomCategory = { type, cat ->
+                  viewModel.addCustomCategory(type, cat)
+                }
+              )
+            }
+
+            // Individual Budget Detail Screen Full-Screen Animated Overlay
+            AnimatedVisibility(
+              visible = activeBudgetDetail != null,
+              enter = slideInHorizontally(
+                initialOffsetX = { it },
+                animationSpec = spring(
+                  dampingRatio = Spring.DampingRatioLowBouncy,
+                  stiffness = Spring.StiffnessLow
+                )
+              ) + fadeIn(
+                animationSpec = spring(
+                  dampingRatio = Spring.DampingRatioLowBouncy,
+                  stiffness = Spring.StiffnessLow
+                )
+              ),
+              exit = slideOutHorizontally(
+                targetOffsetX = { it },
+                animationSpec = spring(
+                  dampingRatio = Spring.DampingRatioLowBouncy,
+                  stiffness = Spring.StiffnessLow
+                )
+              ) + fadeOut(
+                animationSpec = spring(
+                  dampingRatio = Spring.DampingRatioLowBouncy,
+                  stiffness = Spring.StiffnessLow
+                )
+              )
+            ) {
+              cachedBudgetDetail?.let { cachedBudget ->
+                val currentBudget = uiState.budgets.find { it.id == cachedBudget.id } ?: cachedBudget
+                BudgetDetailScreen(
+                  budget = currentBudget,
+                  transactions = uiState.transactions,
+                  onBack = { activeBudgetDetail = null },
+                  onEditBudget = { updatedBudget ->
+                    viewModel.updateBudget(updatedBudget)
+                    activeBudgetDetail = updatedBudget
+                    cachedBudgetDetail = updatedBudget
+                  },
+                  onDeleteBudget = { budgetId ->
+                    viewModel.deleteBudget(budgetId)
+                    activeBudgetDetail = null
+                  }
+                )
+              }
+            }
           }
         }
       }

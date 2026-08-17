@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Work
 import androidx.lifecycle.ViewModel
+import com.finwall.app.data.model.BudgetItem
 import com.finwall.app.data.model.CategoryOption
 import com.finwall.app.data.model.DefaultDebtCategories
 import com.finwall.app.data.model.DefaultExpenseCategories
@@ -40,6 +41,7 @@ data class MainUiState(
     val isBouncyMotion: Boolean = true,
     val transactions: List<TransactionItem> = emptyList(),
     val categoriesMap: Map<TransactionType, List<CategoryOption>> = emptyMap(),
+    val budgets: List<BudgetItem> = emptyList(),
     val monthlyBudgetLimit: Double = 3000.0,
     val activityLogs: List<FinancialActivityLog> = emptyList()
 ) {
@@ -212,6 +214,60 @@ class MainViewModel : ViewModel() {
             val updated = listOf(category) + existing
             val newMap = current.categoriesMap.toMutableMap().apply { put(type, updated) }
             current.copy(categoriesMap = newMap)
+        }
+    }
+
+    fun addBudget(budget: BudgetItem) {
+        _uiState.update { current ->
+            val updatedList = listOf(budget) + current.budgets
+            val newLog = FinancialActivityLog(
+                title = "Budget Created: ${budget.name}",
+                subtitle = "Limit: AED ${"%,.2f".format(budget.monthlyLimit)} • ${budget.category}",
+                icon = budget.icon,
+                isHighlighted = true,
+                timestamp = System.currentTimeMillis()
+            )
+            current.copy(
+                budgets = updatedList,
+                activityLogs = listOf(newLog) + current.activityLogs
+            )
+        }
+    }
+
+    fun updateBudget(budget: BudgetItem) {
+        _uiState.update { current ->
+            val updatedList = current.budgets.map { if (it.id == budget.id) budget else it }
+            val editLog = FinancialActivityLog(
+                title = "Budget Updated: ${budget.name}",
+                subtitle = "Limit: AED ${"%,.2f".format(budget.monthlyLimit)} • ${budget.category}",
+                icon = budget.icon,
+                isHighlighted = false,
+                timestamp = System.currentTimeMillis()
+            )
+            current.copy(
+                budgets = updatedList,
+                activityLogs = listOf(editLog) + current.activityLogs
+            )
+        }
+    }
+
+    fun deleteBudget(budgetId: String) {
+        _uiState.update { current ->
+            val target = current.budgets.find { it.id == budgetId }
+            val updatedList = current.budgets.filter { it.id != budgetId }
+            val deleteLog = target?.let {
+                FinancialActivityLog(
+                    title = "Budget Deleted: ${it.name}",
+                    subtitle = "${it.category} limit removed",
+                    icon = it.icon,
+                    isHighlighted = false,
+                    timestamp = System.currentTimeMillis()
+                )
+            }
+            current.copy(
+                budgets = updatedList,
+                activityLogs = if (deleteLog != null) listOf(deleteLog) + current.activityLogs else current.activityLogs
+            )
         }
     }
 

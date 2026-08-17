@@ -84,6 +84,48 @@ data class FinancialActivityLog(
     val timestamp: Long = System.currentTimeMillis()
 )
 
+data class BudgetItem(
+    val id: String = UUID.randomUUID().toString(),
+    val name: String,
+    val category: String,
+    val monthlyLimit: Double,
+    val period: String = "Monthly",
+    val startMonth: String = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(Date()),
+    val description: String = "",
+    val icon: ImageVector = Icons.Default.Fastfood,
+    val colorIndex: Int = 0,
+    val createdAt: Long = System.currentTimeMillis()
+) {
+    fun calculateSpentAmount(transactions: List<TransactionItem>): Double {
+        return transactions
+            .filter { it.category.equals(category, ignoreCase = true) && it.type == TransactionType.EXPENSE }
+            .sumOf { it.amount }
+    }
+
+    fun calculateRemainingAmount(transactions: List<TransactionItem>): Double {
+        val spent = calculateSpentAmount(transactions)
+        return (monthlyLimit - spent).coerceAtLeast(0.0)
+    }
+
+    fun calculateUsagePercentage(transactions: List<TransactionItem>): Float {
+        if (monthlyLimit <= 0) return 0f
+        val spent = calculateSpentAmount(transactions)
+        return (spent / monthlyLimit).toFloat().coerceIn(0f, 1f)
+    }
+
+    fun isOverLimit(transactions: List<TransactionItem>): Boolean {
+        return calculateSpentAmount(transactions) > monthlyLimit
+    }
+
+    fun statusText(transactions: List<TransactionItem>): String {
+        return if (isOverLimit(transactions)) "Exceeded limit" else "Under limit"
+    }
+
+    fun statusCaption(transactions: List<TransactionItem>): String {
+        return if (isOverLimit(transactions)) "Slow down your spending! ⚠️" else "You're doing great! 🎉"
+    }
+}
+
 // Helper formatting functions
 fun formatTimestampToDate(timestamp: Long): String {
     val now = System.currentTimeMillis()
